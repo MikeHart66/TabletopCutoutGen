@@ -1,7 +1,6 @@
 /// Known problems:
 ///
-/// Face culling needs improvement. At the moment objects must use SetObjectCullMode(ob, 0). However, shadows seem to be behaving OK.
-/// OBJ export needs improving. Files work in 3D editors but when loaded into AGK they seem to be borked.
+/// OBJ exported files seems to still use dynamically generated normals instead of normals generated in code.
 
 #include "polygon.agc"
 
@@ -20,13 +19,14 @@ SetSyncRate(30, 0 ) // 30fps instead of 60 to save battery
 SetVSync(1)
 SetScissor(0, 0, 0, 0) // use the maximum available screen space, no black borders
 UseNewDefaultFonts(1) // since version 2.0.22 we can use nicer default fonts
-SetAmbientColor(63, 63, 63)
+SetAmbientColor(0, 0, 0)
 SetAntialiasMode(1)
 SetGenerateMipmaps(1)
 SetShadowMappingMode(3)
-SetShadowMapSize(1024, 1024)
+SetShadowMapSize(2048, 2048)
 SetShadowSmoothing(0)
-SetSunDirection(0.25, -0.25, 0.5)
+SetShadowBias(0.01)
+SetSunDirection(-0.2, -0.3, 0.5)
 
 local points as PointF[]
 local faces as Face[]
@@ -38,18 +38,28 @@ chessImage = LoadImage("chess.jpg")
 marbleImage = LoadImage("marble.png")
 marbleNormalImage = LoadImage("marble_NORM.png")
 baseImage = LoadImage("spy.png")
+
+Print("Flattening image...")
+Sync()
 texture = FlattenImage(baseImage)
 
+Print("Creating point list...")
+Sync()
 points = DouglasPeuckerReduction(CalculateHull(baseImage, 256, 1), 0.01)
+
+Print("Triangulating...")
+Sync()
 faces = Triangulate(points)
 
-ob = CreateCutoutObject(points, faces, 0.015)
+Print("Creating object...")
+Sync()
+ob = CreateCutoutObject(points, faces, 0.03)
 SetObjectImage(ob, texture, 0)
 SetObjectScale(ob, 50, 50, 50)
 SetObjectRotation(ob, 180, 0, 0)
-//SetObjectCullMode(ob, 0)
 SetObjectPosition(ob, 0, 0, 0)
 SetObjectCastShadow(ob, 1)
+SetObjectLightMode(ob, 2)
 
 base = CreateObjectCylinder(0.025, Abs(GetObjectSizeMinX(ob)) + GetObjectSizeMaxX(ob), 32)
 SetObjectimage(base, marbleImage, 0)
@@ -66,7 +76,7 @@ SetObjectReceiveShadow(board, 1)
 
 do
 	
-	RotateObjectLocalY(ob, 1)
+	RotateObjectLocalY(ob, 0.25)
     Print("Triangles: " + Str((faces.Length * 2) + (points.Length * 2)))
     Sync()
 loop
@@ -81,10 +91,10 @@ function CreateCutoutObject(points ref as PointF[], faces ref as Face[], thickne
 	blockSize = (3 + 2 + 3) * 4
 	thick# = thickness / 2.0
 	
-	vString$ = ""
-	vtString$ = ""
-	vnString$ = ""
-	fString$ = ""
+	//vString$ = ""
+	//vtString$ = ""
+	//vnString$ = ""
+	//fString$ = ""
 
 	mem = CreateMemblock((numVerticies * 2 * blockSize) + (numIndicies * 2 * 4) + (numExtendedIndices * 4) + 60)
 
@@ -119,15 +129,15 @@ function CreateCutoutObject(points ref as PointF[], faces ref as Face[], thickne
 		SetMemblockFloat(mem, index, points[i].X)
 		SetMemblockFloat(mem, index + 4, points[i].Y)
 		SetMemblockFloat(mem, index + 8, -thick#)
-		vString$ = vString$ + "v " + Str(points[i].X) + " " + Str(points[i].Y) + " " + Str(-thick#) + Chr(13) + chr(10)
+		//vString$ = vString$ + "v " + Str(points[i].X) + " " + Str(points[i].Y) + " " + Str(-thick#) + Chr(13) + chr(10)
 		SetMemblockFloat(mem, index + 12, points[i].U)
 		SetMemblockFloat(mem, index + 16, points[i].V)
-		vtString$ = vtString$ + "vt " + Str(points[i].U) + " " + Str(points[i].V) + Chr(13) + chr(10)
-		tv = NormalizeVector3(points[i].U - 0.5, points[i].V - 0.5, -0.5)
+		//vtString$ = vtString$ + "vt " + Str(points[i].U) + " " + Str(points[i].V) + Chr(13) + chr(10)
+		tv = NormalizeVector3(points[i].U - 0.5, points[i].V - 0.5, -0.75)
 		SetMemblockFloat(mem, index + 20, tv.X)
 		SetMemblockFloat(mem, index + 24, tv.Y)
 		SetMemblockFloat(mem, index + 28, tv.Z)
-		vnString$ = vnString$ + "vn " + Str(tv.X) + " " + Str(tv.Y) + " " + Str(tv.Z) + Chr(13) + chr(10)
+		//vnString$ = vnString$ + "vn " + Str(tv.X) + " " + Str(tv.Y) + " " + Str(tv.Z) + Chr(13) + chr(10)
 	next i
 	
 	offset = offset + (numVerticies * blockSize)
@@ -136,29 +146,28 @@ function CreateCutoutObject(points ref as PointF[], faces ref as Face[], thickne
 		SetMemblockFloat(mem, index, points[i].X)
 		SetMemblockFloat(mem, index + 4, points[i].Y)
 		SetMemblockFloat(mem, index + 8, thick#)
-		vString$ = vString$ + "v " + Str(points[i].X) + " " + Str(points[i].Y) + " " + Str(thick#) + Chr(13) + chr(10)
+		//vString$ = vString$ + "v " + Str(points[i].X) + " " + Str(points[i].Y) + " " + Str(thick#) + Chr(13) + chr(10)
 		SetMemblockFloat(mem, index + 12, points[i].U)
 		SetMemblockFloat(mem, index + 16, points[i].V)
-		vtString$ = vtString$ + "vt " + Str(points[i].U) + " " + Str(points[i].V) + Chr(13) + chr(10)
-		tv = NormalizeVector3(points[i].U - 0.5, points[i].V - 0.5, 0.5)
+		//vtString$ = vtString$ + "vt " + Str(points[i].U) + " " + Str(points[i].V) + Chr(13) + chr(10)
+		tv = NormalizeVector3(points[i].U - 0.5, points[i].V - 0.5, 0.75)
 		SetMemblockFloat(mem, index + 20, tv.X)
 		SetMemblockFloat(mem, index + 24, tv.Y)
 		SetMemblockFloat(mem, index + 28, tv.Z)
-		vnString$ = vnString$ + "vn " + Str(tv.X) + " " + Str(tv.Y) + " " + Str(tv.Z) + Chr(13) + chr(10)
+		//vnString$ = vnString$ + "vn " + Str(tv.X) + " " + Str(tv.Y) + " " + Str(tv.Z) + Chr(13) + chr(10)
 	next i
 	
 	offset = offset + (numVerticies * blockSize)
 	SetMemblockInt(mem, 20, offset)
 	
-	fString$ = fString$ + "g object" + Chr(13) + Chr(10) + "usemtl material" + Chr(13) + Chr(10)
+	fString$ = fString$ + "s off" + Chr(13) + Chr(10)
 	
 	for i = 0 to faces.Length
 		index = offset + (i * 12)
 		SetmemblockInt(mem, index, faces[i].Vertex[0].ID + 0)
 		SetmemblockInt(mem, index + 4, faces[i].Vertex[1].ID + 0)
 		SetmemblockInt(mem, index + 8, faces[i].Vertex[2].ID + 0)
-		//fString$ = fString$ + "f " + Str(faces[i].Vertex[0].ID + 1) + " " + Str(faces[i].Vertex[1].ID + 1) + " " + Str(faces[i].Vertex[2].ID + 1) + Chr(13) + Chr(10)
-		fString$ = fString$ + "f " + FaceVTN(faces[i].Vertex[0].ID + 1) + " " + FaceVTN(faces[i].Vertex[1].ID + 1) + " " + FaceVTN(faces[i].Vertex[2].ID + 1) + Chr(13) + Chr(10)
+		//fString$ = fString$ + "f " + FaceVTN(faces[i].Vertex[0].ID + 1) + " " + FaceVTN(faces[i].Vertex[1].ID + 1) + " " + FaceVTN(faces[i].Vertex[2].ID + 1) + Chr(13) + Chr(10)
 	next i
 	
 	offset = offset + (numIndicies * 4)
@@ -168,8 +177,7 @@ function CreateCutoutObject(points ref as PointF[], faces ref as Face[], thickne
 		SetmemblockInt(mem, index, faces[i].Vertex[2].ID + numVerticies)
 		SetmemblockInt(mem, index + 4, faces[i].Vertex[1].ID + numVerticies)
 		SetmemblockInt(mem, index + 8, faces[i].Vertex[0].ID + numVerticies)
-		//fString$ = fString$ + "f " + Str(faces[i].Vertex[0].ID + 1 + numVerticies) + " " + Str(faces[i].Vertex[1].ID + 1 + numVerticies) + " " + Str(faces[i].Vertex[2].ID + 1 + numVerticies) + Chr(13) + Chr(10)
-		fString$ = fString$ + "f " + FaceVTN(faces[i].Vertex[2].ID + 1 + numVerticies) + " " + FaceVTN(faces[i].Vertex[1].ID + 1 + numVerticies) + " " + FaceVTN(faces[i].Vertex[0].ID + 1 + numVerticies) + Chr(13) + Chr(10)
+		//fString$ = fString$ + "f " + FaceVTN(faces[i].Vertex[2].ID + 1 + numVerticies) + " " + FaceVTN(faces[i].Vertex[1].ID + 1 + numVerticies) + " " + FaceVTN(faces[i].Vertex[0].ID + 1 + numVerticies) + Chr(13) + Chr(10)
 	next i
 	
 	offset = offset + (numIndicies * 4)
@@ -182,9 +190,7 @@ function CreateCutoutObject(points ref as PointF[], faces ref as Face[], thickne
 		SetmemblockInt(mem, index, p2 + numVerticies)
 		SetmemblockInt(mem, index + 4, p2 + 0)
 		SetmemblockInt(mem, index + 8, p1 + 0)
-		
-		//fString$ = fString$ + "f " + Str(p1 + 0 + 1) + " " + Str(p2 + 0 + 1) + " " + Str(p2 + numVerticies + 1) + Chr(13) + Chr(10)
-		fString$ = fString$ + "f " + FaceVTN(p2 + numVerticies + 1) + " " + FaceVTN(p2 + 0 + 1) + " " + FaceVTN(p1 + 0 + 1) + Chr(13) + Chr(10)
+		//fString$ = fString$ + "f " + FaceVTN(p2 + numVerticies + 1) + " " + FaceVTN(p2 + 0 + 1) + " " + FaceVTN(p1 + 0 + 1) + Chr(13) + Chr(10)
 	next i
 	
 	offset = offset + (numVerticies * 3 * 4)
@@ -195,20 +201,21 @@ function CreateCutoutObject(points ref as PointF[], faces ref as Face[], thickne
 		SetmemblockInt(mem, index, p1 + 0)
 		SetmemblockInt(mem, index + 4, p1 + numVerticies)
 		SetmemblockInt(mem, index + 8, p2 + numVerticies)
-		//fString$ = fString$ + "f " + Str(p2 + numVerticies + 1) + " " + Str(p1 + numVerticies + 1) + " " + Str(p1 + 0 + 1) + Chr(13) + Chr(10)
-		fString$ = fString$ + "f " + FaceVTN(p1 + 0 + 1) + " " + FaceVTN(p1 + numVerticies + 1) + " " + FaceVTN(p2 + numVerticies + 1) + Chr(13) + Chr(10)
+		//fString$ = fString$ + "f " + FaceVTN(p1 + 0 + 1) + " " + FaceVTN(p1 + numVerticies + 1) + " " + FaceVTN(p2 + numVerticies + 1) + Chr(13) + Chr(10)
 	next i
 		
 	ob = CreateObjectFromMeshMemblock(mem)
-		
+	
+	CreateFileFromMemblock("output.dat", mem)
 	DeleteMemblock(mem)
 	
-	f = OpenToWrite("output.obj")
-	WriteLine(f, vString$)
-	WriteLine(f, vtString$)
-	WriteLine(f, vnString$)
-	WriteLine(f, fString$)
-	CloseFile(f)
+	//f = OpenToWrite("output.obj")
+	//WriteLine(f, "o object")
+	//WriteLine(f, vString$)
+	//WriteLine(f, vtString$)
+	//WriteLine(f, vnString$)
+	//WriteLine(f, fString$)
+	//CloseFile(f)
 	
 endfunction ob
 
@@ -227,8 +234,8 @@ function FlattenImage(img as integer)
 	ih = GetImageHeight(img)
 	
 	r = CreateRenderImage(iw, ih, 0, 0)
-	SetImageMagFilter(r, 0)
-	SetImageMinFilter(r, 0)
+	//SetImageMagFilter(r, 0)
+	//SetImageMinFilter(r, 0)
 	
 	SetRenderToImage(r, 0)
 	SetVirtualResolution(iw, ih)
@@ -253,6 +260,8 @@ function FlattenImage(img as integer)
 				SetMemblockByte(mem, (i * 4) + 12, 255)
 				SetMemblockByte(mem, (i * 4) + 1 + 12, 255)
 				SetMemblockByte(mem, (i * 4) + 2 + 12, 255)
+				SetMemblockByte(mem, (i * 4) + 3 + 12, 255)
+			elseif alpha < 255
 				SetMemblockByte(mem, (i * 4) + 3 + 12, 255)
 			endif
 			

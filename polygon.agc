@@ -25,7 +25,7 @@ endtype
 
 function NormalizeVector3(x#, y#, z#)
 	
-	d# = Sqrt(LengthSq(x#, y#, z#))
+	d# = Sqrt(LengthSq3(x#, y#, z#))
 	
 	local v as Vector3
 	v.X = x# / d#
@@ -34,9 +34,17 @@ function NormalizeVector3(x#, y#, z#)
 	
 endfunction v
 
-function LengthSq(x#, y#, z#)
+function EdgeVector3(x#, y#, z#)
+	
+endfunction
+
+function LengthSq3(x#, y#, z#)
 	
 endfunction (x# * x#) + (y# * y#) + (z# * z#)
+
+function LengthSq2(x#, y#)
+	
+endfunction (x# * x#) + (y# * y#)
 
 function Triangulate(polygon as PointF[])
 	
