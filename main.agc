@@ -23,9 +23,10 @@ UseNewDefaultFonts(1) // since version 2.0.22 we can use nicer default fonts
 SetAmbientColor(63, 63, 63)
 SetAntialiasMode(1)
 SetGenerateMipmaps(1)
-SetShadowMappingMode(2)
+SetShadowMappingMode(3)
 SetShadowMapSize(1024, 1024)
 SetShadowSmoothing(0)
+SetSunDirection(0.25, -0.25, 0.5)
 
 local points as PointF[]
 local faces as Face[]
@@ -46,7 +47,7 @@ ob = CreateCutoutObject(points, faces, 0.015)
 SetObjectImage(ob, texture, 0)
 SetObjectScale(ob, 50, 50, 50)
 SetObjectRotation(ob, 180, 0, 0)
-SetObjectCullMode(ob, 0)
+//SetObjectCullMode(ob, 0)
 SetObjectPosition(ob, 0, 0, 0)
 SetObjectCastShadow(ob, 1)
 
@@ -153,21 +154,22 @@ function CreateCutoutObject(points ref as PointF[], faces ref as Face[], thickne
 	
 	for i = 0 to faces.Length
 		index = offset + (i * 12)
-		SetmemblockInt(mem, index, faces[i].Vertex[2].ID + 0)
+		SetmemblockInt(mem, index, faces[i].Vertex[0].ID + 0)
 		SetmemblockInt(mem, index + 4, faces[i].Vertex[1].ID + 0)
-		SetmemblockInt(mem, index + 8, faces[i].Vertex[0].ID + 0)
-
-		fString$ = fString$ + "f " + Str(faces[i].Vertex[0].ID + 1) + " " + Str(faces[i].Vertex[1].ID + 1) + " " + Str(faces[i].Vertex[2].ID + 1) + Chr(13) + Chr(10)
+		SetmemblockInt(mem, index + 8, faces[i].Vertex[2].ID + 0)
+		//fString$ = fString$ + "f " + Str(faces[i].Vertex[0].ID + 1) + " " + Str(faces[i].Vertex[1].ID + 1) + " " + Str(faces[i].Vertex[2].ID + 1) + Chr(13) + Chr(10)
+		fString$ = fString$ + "f " + FaceVTN(faces[i].Vertex[0].ID + 1) + " " + FaceVTN(faces[i].Vertex[1].ID + 1) + " " + FaceVTN(faces[i].Vertex[2].ID + 1) + Chr(13) + Chr(10)
 	next i
 	
 	offset = offset + (numIndicies * 4)
 	for i = 0 to faces.Length
 		index = offset + (i * 12)
 		v = faces[i].Vertex.Length
-		SetmemblockInt(mem, index, faces[i].Vertex[0].ID + numVerticies)
+		SetmemblockInt(mem, index, faces[i].Vertex[2].ID + numVerticies)
 		SetmemblockInt(mem, index + 4, faces[i].Vertex[1].ID + numVerticies)
-		SetmemblockInt(mem, index + 8, faces[i].Vertex[2].ID + numVerticies)
-		fString$ = fString$ + "f " + Str(faces[i].Vertex[0].ID + 1 + numVerticies) + " " + Str(faces[i].Vertex[1].ID + 1 + numVerticies) + " " + Str(faces[i].Vertex[2].ID + 1 + numVerticies) + Chr(13) + Chr(10)
+		SetmemblockInt(mem, index + 8, faces[i].Vertex[0].ID + numVerticies)
+		//fString$ = fString$ + "f " + Str(faces[i].Vertex[0].ID + 1 + numVerticies) + " " + Str(faces[i].Vertex[1].ID + 1 + numVerticies) + " " + Str(faces[i].Vertex[2].ID + 1 + numVerticies) + Chr(13) + Chr(10)
+		fString$ = fString$ + "f " + FaceVTN(faces[i].Vertex[2].ID + 1 + numVerticies) + " " + FaceVTN(faces[i].Vertex[1].ID + 1 + numVerticies) + " " + FaceVTN(faces[i].Vertex[0].ID + 1 + numVerticies) + Chr(13) + Chr(10)
 	next i
 	
 	offset = offset + (numIndicies * 4)
@@ -177,10 +179,12 @@ function CreateCutoutObject(points ref as PointF[], faces ref as Face[], thickne
 		p1 = i
 		p2 = Mod(i + 1, points.Length + 1)
 		index = offset + (i * 12)
-		SetmemblockInt(mem, index, p1 + 0)
+		SetmemblockInt(mem, index, p2 + numVerticies)
 		SetmemblockInt(mem, index + 4, p2 + 0)
-		SetmemblockInt(mem, index + 8, p2 + numVerticies)
-		fString$ = fString$ + "f " + Str(p1 + 0 + 1) + " " + Str(p2 + 0 + 1) + " " + Str(p2 + numVerticies + 1) + Chr(13) + Chr(10)
+		SetmemblockInt(mem, index + 8, p1 + 0)
+		
+		//fString$ = fString$ + "f " + Str(p1 + 0 + 1) + " " + Str(p2 + 0 + 1) + " " + Str(p2 + numVerticies + 1) + Chr(13) + Chr(10)
+		fString$ = fString$ + "f " + FaceVTN(p2 + numVerticies + 1) + " " + FaceVTN(p2 + 0 + 1) + " " + FaceVTN(p1 + 0 + 1) + Chr(13) + Chr(10)
 	next i
 	
 	offset = offset + (numVerticies * 3 * 4)
@@ -188,10 +192,11 @@ function CreateCutoutObject(points ref as PointF[], faces ref as Face[], thickne
 		p1 = i
 		p2 = Mod(i + 1, points.Length + 1)
 		index = offset + (i * 12)
-		SetmemblockInt(mem, index, p2 + numVerticies)
+		SetmemblockInt(mem, index, p1 + 0)
 		SetmemblockInt(mem, index + 4, p1 + numVerticies)
-		SetmemblockInt(mem, index + 8, p1 + 0)
-		fString$ = fString$ + "f " + Str(p2 + numVerticies + 1) + " " + Str(p1 + numVerticies + 1) + " " + Str(p1 + 0 + 1) + Chr(13) + Chr(10)
+		SetmemblockInt(mem, index + 8, p2 + numVerticies)
+		//fString$ = fString$ + "f " + Str(p2 + numVerticies + 1) + " " + Str(p1 + numVerticies + 1) + " " + Str(p1 + 0 + 1) + Chr(13) + Chr(10)
+		fString$ = fString$ + "f " + FaceVTN(p1 + 0 + 1) + " " + FaceVTN(p1 + numVerticies + 1) + " " + FaceVTN(p2 + numVerticies + 1) + Chr(13) + Chr(10)
 	next i
 		
 	ob = CreateObjectFromMeshMemblock(mem)
@@ -206,6 +211,12 @@ function CreateCutoutObject(points ref as PointF[], faces ref as Face[], thickne
 	CloseFile(f)
 	
 endfunction ob
+
+function FaceVTN(v)
+	
+	r$ = Str(v) + "/" + Str(v) + "/" + Str(v)
+	
+endfunction r$
 
 function FlattenImage(img as integer)
 	
