@@ -31,10 +31,9 @@ SetSunDirection(-0.2, -0.3, 0.5)
 local points as PointF[]
 local faces as Face[]
 
-SetCameraPosition(1, 0, 25, -100)
+SetCameraPosition(1, 0, 50, -100)
 SetCameraLookAt(1, 0, 0, 0, 0)
 
-chessImage = LoadImage("chess.jpg")
 marbleImage = LoadImage("marble.png")
 marbleNormalImage = LoadImage("marble_NORM.png")
 baseImage = LoadImage("spy.png")
@@ -54,6 +53,7 @@ faces = Triangulate(points)
 Print("Creating object...")
 Sync()
 ob = CreateCutoutObject(points, faces, 0.03)
+
 SetObjectImage(ob, texture, 0)
 SetObjectScale(ob, 50, 50, 50)
 SetObjectRotation(ob, 180, 0, 0)
@@ -68,10 +68,10 @@ SetObjectPosition(base, GetObjectX(ob), GetObjectY(ob) - GetObjectSizeMinY(ob), 
 SetObjectCastShadow(base, 1)
 FixObjectToObject(base, ob)
 
-board = CreateObjectPlane(512, 512)
+board = CreateObjectPlane(256, 256)
 SetObjectRotation(board, 90, 0, 0)
 SetObjectPosition(board, 0, GetObjectY(ob) - 22, 0)
-SetObjectImage(board, chessImage, 0)
+SetObjectColor(board, 127, 127, 127, 255)
 SetObjectReceiveShadow(board, 1)
 
 do
